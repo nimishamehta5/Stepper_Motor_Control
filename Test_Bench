@@ -1,0 +1,75 @@
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.std_logic_unsigned.all;
+
+
+ENTITY pwm_tb IS
+END pwm_tb;
+
+ARCHITECTURE behavior OF pwm_tb IS
+
+COMPONENT top_module is
+port(clk,clr: in std_logic;
+    step: in integer;
+    SpeedSelect:in std_logic_vector(1 downto 0);
+    a,b,c,d: out std_logic);
+end COMPONENT;
+
+
+   signal clk : std_logic := '0';
+   signal clr : std_logic := '1';
+   signal step: integer := 1;
+   signal SpeedSelect:std_logic_vector(1 downto 0);
+   signal a,b,c,d: std_logic;
+    
+   
+   constant clk_period  : time := 100 ps;
+ 
+BEGIN
+
+CONFIG_PWM_tbs: top_module PORT MAP (clk,clr,step,SpeedSelect,a,b,c,d);    
+
+   clk_process :process
+   begin
+        clk <= '0';
+        wait for clk_period/2;  --for 0.5 ns signal is '0'.
+        clk <= '1';
+        wait for clk_period/2;  --for next 0.5 ns signal is '1'.
+   end process;
+   
+   
+   
+   -- Stimulus process
+  stim_proc: process
+   begin        
+        wait for 700 ps;
+        clr <='1';
+        wait for 300 ps;
+        clr <='0';        
+        wait;
+  end process;
+  
+  
+  -- Stimulus process
+  stim_proc1: process
+   begin        
+        wait for 100 ps;
+        SpeedSelect <="01";
+        wait for 10000 ps;
+        SpeedSelect <="00";        
+        wait;
+  end process;
+  
+  -- Stimulus process
+  stim_proc2: process
+   begin        
+        wait for 200 ps;
+        step<=1;
+        wait for 10000 ps;
+        step<=3;        
+        wait;
+  end process;
+  
+    
+  
+ END;
