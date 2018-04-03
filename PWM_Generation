@@ -1,0 +1,166 @@
+
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity pwm_gen is
+port(clk,clr: in std_logic;
+    step: in integer;
+    SpeedSelect:in std_logic_vector(1 downto 0);
+    a,b,c,d: out std_logic);
+end pwm_gen;
+
+
+architecture behave of pwm_gen is
+signal cnt: integer;   
+signal en_ems: std_logic; 
+signal clr_count: std_logic;
+signal mclk,mclka,mclkb,mclkc: std_logic;
+signal clk8ms: std_logic;
+signal cnt_1: integer;
+signal pwm8ms,sclk: std_logic; 
+signal p16,p32,p64:std_logic; 
+signal s1,s2,s3,s4: std_logic;  
+begin
+
+-- Clock division Process
+Clk_Divider:process(clk,clr,clr_count)
+begin
+    if clr='1' or clr_count='1' then
+        cnt<=0;    
+    elsif rising_edge(clk) then
+        cnt<=cnt+1;
+    
+end if;
+end process Clk_Divider;   
+
+
+Latch_count:process(clk,clr,cnt)
+begin
+    if clr='1' then
+        en_ems<='0';
+        clr_count<='0';
+        elsif falling_edge(clk) then
+            if cnt=8000 then
+                en_ems<='1';
+                clr_count<='1';
+                else
+                clr_count<='0';
+            end if;
+        end if;
+end process Latch_count;  
+
+clkdiv:process(clr,clr_count)
+begin
+    if clr='1' then
+        clk8ms<='0';
+        elsif rising_edge(clr_count) then
+            clk8ms<=not clk8ms;
+    end if;
+end process clkdiv;
+
+
+PulseGen16:process(clk,clr,clk8ms)
+begin
+if clr='1' then
+   p16<='0';
+elsif rising_edge(clk8ms) then
+   p16<= not p16;
+   end if;
+end process  PulseGen16;         
+
+
+PulseGen32:process(clk,clr,p16)
+begin
+if clr='1' then
+   p32<='0';
+elsif rising_edge(p16) then
+   p32<= not p32;
+   end if;
+end process  PulseGen32;
+
+
+PulseGen64:process(clr,p32)
+begin
+if clr='1' then
+   p64<='0';
+elsif rising_edge(p32) then
+   p64<= not p64;
+   end if;
+end process  PulseGen64;
+
+
+--nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+-- Step size Generator
+--nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+Step_Count:process(sclk,clr,clk)
+begin
+    if clr='1' then
+        cnt_1<=0;
+        mclk<='0';
+        elsif rising_edge(sclk) then
+            cnt_1<=cnt_1+1;
+            mclk<='1';
+            if (cnt_1=step) or (cnt_1=(step+1)) then
+                mclk<='0';
+                cnt_1<=0;
+            end if;
+end if;
+end process Step_Count;
+--nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+--Step Clk Buffer to reduce Errors
+--nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+buf:process(clk,clr)
+begin
+    if clr='1' then
+        mclka<='0';
+        elsif falling_edge(clk) then
+            mclka<=mclk;
+        end if;
+    end process buf;
+    
+bufb:process(clk,clr)
+begin
+    if clr='1' then
+        mclkb<='0';
+        elsif rising_edge(clk) then
+            mclkb<=mclka;
+        end if;
+    end process bufb;
+    
+bufc:process(clk,clr)
+begin
+    if clr='1' then
+        mclkc<='0';
+        elsif falling_edge(clk) then
+            mclkc<=mclkb;
+        end if;
+    end process bufc;  
+      
+--nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn 
+
+s1<= clk8ms and(( not SpeedSelect(0)) and (not SpeedSelect(1)));
+s2<= p16 and ((not SpeedSelect(0)) and SpeedSelect(1));
+s3<= p32 and (SpeedSelect(0) and (not SpeedSelect(1)));
+s4<= p64 and (SpeedSelect(0) and SpeedSelect(1));
+sclk<= s1 or s2 or s3 or s4;
+--nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn           
+pwm8ms<= sclk and mclk;       
+--nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn      
+
+latch_out:process(clk,clr)
+begin
+if clr='1' then
+   a<='0';   b<='0';
+   c<='0';   d<='0';
+elsif rising_edge(clk) then    
+   a<=   pwm8ms;
+   b<=   ((not pwm8ms));
+   c<=   pwm8ms;
+   d<=   ((not pwm8ms));
+end if;
+end process latch_out;
+--nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+
+end behave;   
+
+
