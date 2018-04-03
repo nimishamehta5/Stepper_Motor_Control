@@ -1,0 +1,30 @@
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity top_module is
+port(clk,clr: in std_logic;
+    step: in integer;
+    SpeedSelect:in std_logic_vector(1 downto 0);
+    a,b,c,d: out std_logic);
+end top_module;
+
+
+architecture behave of top_module is
+    
+COMPONENT pwm_gen is
+port(clk,clr: in std_logic;
+    step: in integer;
+    SpeedSelect:in std_logic_vector(1 downto 0);
+    a,b,c,d: out std_logic);
+end COMPONENT;    
+
+   
+begin
+    
+PulseGen: pwm_gen PORT MAP(clk,clr,step,SpeedSelect,a,b,c,d);
+
+end behave;    
+
+
+
+    
